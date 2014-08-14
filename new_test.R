@@ -139,8 +139,6 @@ chaom <- function(pmin = 1, pmax = 6, B = 10, file){
 }
 
 tab <- table(data[data[, 3] == 1, 4], data[data[, 3]  == 1, 2], data[data[, 3] == 1, 5])
-tab
-attributes(tab)
 sp <- attributes(tab)$dimnames[[1]]
 site <- as.numeric(attributes(tab)$dimnames[[2]])
 abun <- as.numeric(attributes(tab)$dimnames[[3]])
@@ -162,12 +160,14 @@ plot(table(year1)[-1])
 rownames(year1) <- sp
 year1[which(year1[, 1] != 0)]
 
+s1 <- 1
+s2 <- 5
 shared1 <- NULL
 nrow <- NULL
 for(i in 1:length(sp)){
-  if(as.numeric(year1[i, 3]) != 0){
-    if(as.numeric(year1[i, 17]) != 0){
-      nrow <- c(as.numeric(year1[i, 3]), as.numeric(year1[i, 17]))
+  if(as.numeric(year1[i, s1]) != 0){
+    if(as.numeric(year1[i, s2]) != 0){
+      nrow <- c(as.numeric(year1[i, s1]), as.numeric(year1[i, s2]))
       shared1 <- rbind(shared1, nrow)
     }
   }  
@@ -175,12 +175,17 @@ for(i in 1:length(sp)){
 
 shared1
 
-species_s1 <- year1[which(year1[, 3] != 0), 3]
+species_s1 <- year1[which(year1[, s1] != 0), s1]
 sp1 <- attributes(species_s1)$names
-species_s2 <- year1[which(year1[, 17] != 0), 17]
+n <- sum(species_s1)
+nsp1 <- length(species_s1)
+species_s2 <- year1[which(year1[, s2] != 0), s2]
 sp2 <- attributes(species_s2)$names
+m <- sum(species_s2)
+nsp2 <- length(species_s2)
 shared <- intersect(sp1, sp2)
-length(shared)
+nsh <- length(shared)
+
 data.shared <- matrix(0, nrow = length(shared), ncol = 2)
 rownames(data.shared) <- shared
 data.shared
@@ -191,3 +196,101 @@ for(i in 1:length(shared)){
 }
 
 data.shared
+
+(f11 <- dim(shared1[which((shared1[, 1] == 1) & (shared1[, 2] == 1)), ])[1])
+(fm1 <- dim(shared1[which((shared1[, 1] >= 1) & (shared1[, 2] == 1)), ])[1])
+(fm2 <- dim(shared1[which((shared1[, 1] >= 1) & (shared1[, 2] == 2)), ])[1])
+(f1m <- dim(shared1[which((shared1[, 1] == 1) & (shared1[, 2] >= 1)), ])[1])
+(f2m <- dim(shared1[which((shared1[, 1] == 2) & (shared1[, 2] >= 1)), ])[1])
+
+if(fm2 == 0) fm2 <- 1
+if(f2m == 0) f2m <- 1
+
+sum_u1 <- sum(shared1[, 1])/n
+sum_v1 <- sum(shared1[, 2])/m
+
+sum_u2 <- sum(shared1[which(shared1[, 2] == 1), 1])/n
+sum_v2 <- sum(shared1[which(shared1[, 1] == 1), 2])/m
+
+U <- sum_u1 + ((m - 1)/m)*(fm1/(2*fm2))*sum_u2
+V <- sum_v1 + ((n - 1)/n)*(f1m/(2*f2m))*sum_v2
+
+if(U > 1) U <- 1
+if(V > 1) V <- 1
+
+Junad <- sum_u1*sum_v1/(sum_u1 + sum_v1 - sum_u1*sum_v1)
+Lunad <- 2*sum_u1*sum_v1/(sum_u1 + sum_v1)
+
+Jabd <- U*V/(U + V - U*V)
+Labd <- 2*U*V/(U + V)
+
+n; m; nsp1; nsp2; nsh
+f11; f1m; fm1; f2m; fm2
+sum_u1; sum_v1
+U; V
+Junad; Lunad
+Jabd; Labd
+
+######TESTE WITH DATA SPARE####
+spare <- read.table("Data5a.txt", h = F)
+head(spare)
+
+nobs1 <- sum(spare[, 1])
+nobs2 <- sum(spare[, 3])
+nsp1 <- length(spare[which(spare[, 1] != 0), 1])
+nsp2 <- length(spare[which(spare[, 3] != 0), 3])
+
+shared1 <- NULL
+nrow <- NULL
+for(i in 1:dim(spare)[1]){
+  if(spare[i, 1] != 0){
+    if(spare[i, 3] != 0){
+      nrow <- c(spare[i, 1], spare[i, 3])
+      shared1 <- rbind(shared1, nrow)
+    }
+  }  
+}
+shared1
+nsh <- dim(shared1)[1]
+
+f11 <- dim(shared1[which((shared1[, 1] == 1) & (shared1[, 2] == 1)), ])[1]
+fm1 <- dim(shared1[which((shared1[, 1] >= 1) & (shared1[, 2] == 1)), ])[1]
+fm2 <- dim(shared1[which((shared1[, 1] >= 1) & (shared1[, 2] == 2)), ])[1]
+f1m <- dim(shared1[which((shared1[, 1] == 1) & (shared1[, 2] >= 1)), ])[1]
+f2m <- dim(shared1[which((shared1[, 1] == 2) & (shared1[, 2] >= 1)), ])[1]
+sum_u1 <- sum(shared1[, 1])/nobs1
+sum_v1 <- sum(shared1[, 2])/nobs2
+sum_u2 <- sum(shared1[which(shared1[, 2] == 1), 1])/nobs1
+sum_v2 <- sum(shared1[which(shared1[, 1] == 1), 2])/nobs2
+
+if(fm2 == 0) fm2 <- 1
+if(f2m == 0) f2m <- 1
+
+U <- sum_u1 + ((nobs2 - 1)/nobs2)*(fm1/(2*fm2))*sum_u2
+V <- sum_v1 + ((nobs1 - 1)/nobs1)*(f1m/(2*f2m))*sum_v2
+
+if(U > 1) U <- 1
+if(V > 1) V <- 1
+
+Junad <- sum_u1*sum_v1/(sum_u1 + sum_v1 - sum_u1*sum_v1)
+Lunad <- 2*sum_u1*sum_v1/(sum_u1 + sum_v1)
+
+Jabd <- U*V/(U + V - U*V)
+Labd <- 2*U*V/(U + V)
+
+nobs1; nobs2; nsp1; nsp2; nsh
+f11; f1m; fm1; f2m; fm2
+sum_u1; sum_v1
+U; V
+Junad; Lunad
+Jabd; Labd
+
+year1.res <- chao2(period = 1, file = "test_chao2")
+head(year1.res)
+par(mfrow=c(3, 2))
+plot(DIST1[, 3], year1.res[, 15], ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"), main = "Jaccard unadjusted")
+plot(DIST1[, 3], year1.res[, 16], ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"), main = "Sorensen unadjusted")
+plot(DIST1[, 3], year1.res[, 19], ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"), main = "Jaccard adjusted")
+plot(DIST1[, 3], year1.res[, 20], ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"), main = "Sorensen adjusted")
+hist(DIST1[, 3])
+hist(DIST2[, 3])
