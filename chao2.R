@@ -22,7 +22,7 @@ chao2 <- function(period = c(1:6), file = "test"){
     #print(year)
     #print(apply(year, 2, sum))
     #plot(table(year)[-1])
-    rownames(year) <- sp
+    rownames(year) <- species
     #year[which(year[, 1] != 0)]
 
     #Calculate each pair of beta diversity using Chao et al (2005)
