@@ -582,7 +582,7 @@ mean.ci <- c(smeares2.ci[1, 1], sshrres2.ci[1, 1], stalres2.ci[1, 1], swoores2.c
 l.ci <- c(smeares2.ci[1, 2], sshrres2.ci[1, 2], stalres2.ci[1, 2], swoores2.ci[1, 2])
 s.ci <- c(smeares2.ci[1, 3], sshrres2.ci[1, 3], stalres2.ci[1, 3], swoores2.ci[1, 3])
 plot(1:4, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
-title("Second Year - Jaccard Estimator", outer = TRUE, cex = 1.5)
+title("Second Year - Sorensen Estimator", outer = TRUE, cex = 1.5)
 axis(1, at = 1:4, labels = c("Agri", "Short", "Tall", "Forest"))
 segments(x0 = 1:4, y0 = l.ci, y1 = s.ci)
 points(1:4, l.ci, lwd = 1.5, pch = "-")
@@ -707,3 +707,419 @@ abline(a = coef(modelfor1)[[1]], b = coef(modelfor1)[[2]], col = 2, lwd = 4.5)
 plot(fordata2[, 21], 1 - fordata2[, 20], xlim = c(0, 2000), ylim = c(0, 1), xlab = "Geographic Distance (m)" , ylab = expression(~beta*"-diversity"), main = "Forest - Year 2")
 abline(a = coef(modelfor2)[[1]], b = coef(modelfor2)[[2]], col = 2, lwd = 4.5)
 
+# bootstrapping with 2000 replications
+#Jaccard Estimator
+jforres <- boot(data = as.data.frame(fordata), statistic = bs.jac, R = 3000, formula = (1 - Jabd) ~ ipcc)
+jforres1 <- boot(data = as.data.frame(fordata1), statistic = bs.jac, R = 2000, formula = (1 - Jabd) ~ ipcc)
+jforres2 <- boot(data = as.data.frame(fordata2), statistic = bs.jac, R = 2000, formula = (1 - Jabd) ~ ipcc)
+
+jmixres <- boot(data = as.data.frame(mixdata), statistic = bs.jac, R = 3000, formula = (1 - Jabd) ~ ipcc)
+jmixres1 <- boot(data = as.data.frame(mixdata1), statistic = bs.jac, R = 2000, formula = (1 - Jabd) ~ ipcc)
+jmixres2 <- boot(data = as.data.frame(mixdata2), statistic = bs.jac, R = 2000, formula = (1 - Jabd) ~ ipcc)
+
+jmeares <- boot(data = as.data.frame(meadata), statistic = bs.jac, R = 3000, formula = (1 - Jabd) ~ ipcc)
+jmeares1 <- boot(data = as.data.frame(meadata1), statistic = bs.jac, R = 2000, formula = (1 - Jabd) ~ ipcc)
+jmeares2 <- boot(data = as.data.frame(meadata2), statistic = bs.jac, R = 2000, formula = (1 - Jabd) ~ ipcc)
+
+#Sorensen Estimator
+sforres <- boot(data = as.data.frame(fordata), statistic = bs.sor, R = 3000, formula = (1 - Jabd) ~ ipcc)
+sforres1 <- boot(data = as.data.frame(fordata1), statistic = bs.sor, R = 2000, formula = (1 - Jabd) ~ ipcc)
+sforres2 <- boot(data = as.data.frame(fordata2), statistic = bs.sor, R = 2000, formula = (1 - Jabd) ~ ipcc)
+
+smixres <- boot(data = as.data.frame(mixdata), statistic = bs.sor, R = 3000, formula = (1 - Jabd) ~ ipcc)
+smixres1 <- boot(data = as.data.frame(mixdata1), statistic = bs.sor, R = 2000, formula = (1 - Jabd) ~ ipcc)
+smixres2 <- boot(data = as.data.frame(mixdata2), statistic = bs.sor, R = 2000, formula = (1 - Jabd) ~ ipcc)
+
+smeares <- boot(data = as.data.frame(meadata), statistic = bs.sor, R = 3000, formula = (1 - Jabd) ~ ipcc)
+smeares1 <- boot(data = as.data.frame(meadata1), statistic = bs.sor, R = 2000, formula = (1 - Jabd) ~ ipcc)
+smeares2 <- boot(data = as.data.frame(meadata2), statistic = bs.sor, R = 2000, formula = (1 - Jabd) ~ ipcc)
+
+# get 95% confidence intervals
+###Jaccard Estimators
+##Forest
+temp1 <- boot.ci(jforres, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jforres, type="bca", index=2) # slope
+temp3 <- boot.ci(jforres, type="bca", index=3) # r.square
+temp4 <- boot.ci(jforres, type="bca", index=4) # mean
+
+forres.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(jforres1, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jforres1, type="bca", index=2) # slope
+temp3 <- boot.ci(jforres1, type="bca", index=3) # r.square
+temp4 <- boot.ci(jforres1, type="bca", index=4) # mean
+
+forres1.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(jforres2, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jforres2, type="bca", index=2) # slope
+temp3 <- boot.ci(jforres2, type="bca", index=3) # r.square
+temp4 <- boot.ci(jforres2, type="bca", index=4) # mean
+
+forres2.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+##Mixed
+temp1 <- boot.ci(jmixres, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jmixres, type="bca", index=2) # slope
+temp3 <- boot.ci(jmixres, type="bca", index=3) # r.square
+temp4 <- boot.ci(jmixres, type="bca", index=4) # mean
+
+mixres.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(jmixres1, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jmixres1, type="bca", index=2) # slope
+temp3 <- boot.ci(jmixres1, type="bca", index=3) # r.square
+temp4 <- boot.ci(jmixres1, type="bca", index=4) # mean
+
+mixres1.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(jmixres2, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jmixres2, type="bca", index=2) # slope
+temp3 <- boot.ci(jmixres2, type="bca", index=3) # r.square
+temp4 <- boot.ci(jmixres2, type="bca", index=4) # mean
+
+mixres2.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+##Meadow
+temp1 <- boot.ci(jmeares, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jmeares, type="bca", index=2) # slope
+temp3 <- boot.ci(jmeares, type="bca", index=3) # r.square
+temp4 <- boot.ci(jmeares, type="bca", index=4) # mean
+
+meares.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(jmeares1, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jmeares1, type="bca", index=2) # slope
+temp3 <- boot.ci(jmeares1, type="bca", index=3) # r.square
+temp4 <- boot.ci(jmeares1, type="bca", index=4) # mean
+
+meares1.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(jmeares2, type="bca", index=1) # intercept 
+temp2 <- boot.ci(jmeares2, type="bca", index=2) # slope
+temp3 <- boot.ci(jmeares2, type="bca", index=3) # r.square
+temp4 <- boot.ci(jmeares2, type="bca", index=4) # mean
+
+meares2.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+par(mfrow = c(2, 2))
+##ALL Years (jac.boot.land.tiff)
+#Intercept
+mean.ci <- c(meares.ci[1, 1], mixres.ci[1, 1], forres.ci[1, 1])
+l.ci <- c(meares.ci[1, 2], mixres.ci[1, 2], forres.ci[1, 2])
+s.ci <- c(meares.ci[1, 3], mixres.ci[1, 3], forres.ci[1, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+title("All Years - Jaccard Estimator", outer = TRUE, cex = 1.5)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#Dissimilarity
+mean.ci <- c(meares.ci[4, 1], mixres.ci[4, 1], forres.ci[4, 1])
+l.ci <- c(meares.ci[4, 2], mixres.ci[4, 2], forres.ci[4, 2])
+s.ci <- c(meares.ci[4, 3], mixres.ci[4, 3], forres.ci[4, 3])
+plot(1:3, 1 - mean.ci, xaxt = "n", ylim = c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = 1 - l.ci, y1 = 1 - s.ci)
+points(1:3, 1 - l.ci, lwd = 1.5, pch = "-")
+points(1:3, 1 - s.ci, lwd = 1.5, pch = "-")
+
+#Slope
+mean.ci <- c(meares.ci[2, 1], mixres.ci[2, 1], woores.ci[2, 1])
+l.ci <- c(meares.ci[2, 2], mixres.ci[2, 2], woores.ci[2, 2])
+s.ci <- c(meares.ci[2, 3], mixres.ci[2, 3], woores.ci[2, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#R-Square
+mean.ci <- c(meares.ci[3, 1], mixres.ci[3, 1], woores.ci[3, 1])
+l.ci <- c(meares.ci[3, 2], mixres.ci[3, 2], woores.ci[3, 2])
+s.ci <- c(meares.ci[3, 3], mixres.ci[3, 3], woores.ci[3, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+##First Year (jac.boot.land1.tiff)
+#Intercept
+mean.ci <- c(meares1.ci[1, 1], mixres1.ci[1, 1], forres1.ci[1, 1])
+l.ci <- c(meares1.ci[1, 2], mixres1.ci[1, 2], forres1.ci[1, 2])
+s.ci <- c(meares1.ci[1, 3], mixres1.ci[1, 3], forres1.ci[1, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+title("First Year - Jaccard Estimator", outer = TRUE, cex = 1.5)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#Dissimilarity
+mean.ci <- c(meares1.ci[4, 1], mixres1.ci[4, 1], forres1.ci[4, 1])
+l.ci <- c(meares1.ci[4, 2], mixres1.ci[4, 2], forres1.ci[4, 2])
+s.ci <- c(meares1.ci[4, 3], mixres1.ci[4, 3], forres1.ci[4, 3])
+plot(1:3, 1 - mean.ci, xaxt = "n", ylim = c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = 1 - l.ci, y1 = 1 - s.ci)
+points(1:3, 1 - l.ci, lwd = 1.5, pch = "-")
+points(1:3, 1 - s.ci, lwd = 1.5, pch = "-")
+
+#Slope
+mean.ci <- c(meares1.ci[2, 1], mixres1.ci[2, 1], woores1.ci[2, 1])
+l.ci <- c(meares1.ci[2, 2], mixres1.ci[2, 2], woores1.ci[2, 2])
+s.ci <- c(meares1.ci[2, 3], mixres1.ci[2, 3], woores1.ci[2, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#R-Square
+mean.ci <- c(meares1.ci[3, 1], mixres1.ci[3, 1], woores1.ci[3, 1])
+l.ci <- c(meares1.ci[3, 2], mixres1.ci[3, 2], woores1.ci[3, 2])
+s.ci <- c(meares1.ci[3, 3], mixres1.ci[3, 3], woores1.ci[3, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+##Second Year (jac.boot.land2.tiff)
+#Intercept
+mean.ci <- c(meares2.ci[1, 1], mixres2.ci[1, 1], forres2.ci[1, 1])
+l.ci <- c(meares2.ci[1, 2], mixres2.ci[1, 2], forres2.ci[1, 2])
+s.ci <- c(meares2.ci[1, 3], mixres2.ci[1, 3], forres2.ci[1, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+title("Second Year - Jaccard Estimator", outer = TRUE, cex = 1.5)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#Dissimilarity
+mean.ci <- c(meares2.ci[4, 1], mixres2.ci[4, 1], forres2.ci[4, 1])
+l.ci <- c(meares2.ci[4, 2], mixres2.ci[4, 2], forres2.ci[4, 2])
+s.ci <- c(meares2.ci[4, 3], mixres2.ci[4, 3], forres2.ci[4, 3])
+plot(1:3, 1 - mean.ci, xaxt = "n", ylim = c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = 1 - l.ci, y1 = 1 - s.ci)
+points(1:3, 1 - l.ci, lwd = 1.5, pch = "-")
+points(1:3, 1 - s.ci, lwd = 1.5, pch = "-")
+
+#Slope
+mean.ci <- c(meares2.ci[2, 1], mixres2.ci[2, 1], woores2.ci[2, 1])
+l.ci <- c(meares2.ci[2, 2], mixres2.ci[2, 2], woores2.ci[2, 2])
+s.ci <- c(meares2.ci[2, 3], mixres2.ci[2, 3], woores2.ci[2, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#R-Square
+mean.ci <- c(meares2.ci[3, 1], mixres2.ci[3, 1], woores2.ci[3, 1])
+l.ci <- c(meares2.ci[3, 2], mixres2.ci[3, 2], woores2.ci[3, 2])
+s.ci <- c(meares2.ci[3, 3], mixres2.ci[3, 3], woores2.ci[3, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+###Sorensen Estimators
+##Forest
+temp1 <- boot.ci(sforres, type="bca", index=1) # intercept 
+temp2 <- boot.ci(sforres, type="bca", index=2) # slope
+temp3 <- boot.ci(sforres, type="bca", index=3) # r.square
+temp4 <- boot.ci(sforres, type="bca", index=4) # mean
+
+sforres.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(sforres1, type="bca", index=1) # intercept 
+temp2 <- boot.ci(sforres1, type="bca", index=2) # slope
+temp3 <- boot.ci(sforres1, type="bca", index=3) # r.square
+temp4 <- boot.ci(sforres1, type="bca", index=4) # mean
+
+sforres1.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(sforres2, type="bca", index=1) # intercept 
+temp2 <- boot.ci(sforres2, type="bca", index=2) # slope
+temp3 <- boot.ci(sforres2, type="bca", index=3) # r.square
+temp4 <- boot.ci(sforres2, type="bca", index=4) # mean
+
+sforres2.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+##Mixed
+temp1 <- boot.ci(smixres, type="bca", index=1) # intercept 
+temp2 <- boot.ci(smixres, type="bca", index=2) # slope
+temp3 <- boot.ci(smixres, type="bca", index=3) # r.square
+temp4 <- boot.ci(smixres, type="bca", index=4) # mean
+
+smixres.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(smixres1, type="bca", index=1) # intercept 
+temp2 <- boot.ci(smixres1, type="bca", index=2) # slope
+temp3 <- boot.ci(smixres1, type="bca", index=3) # r.square
+temp4 <- boot.ci(smixres1, type="bca", index=4) # mean
+
+smixres1.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(smixres2, type="bca", index=1) # intercept 
+temp2 <- boot.ci(smixres2, type="bca", index=2) # slope
+temp3 <- boot.ci(smixres2, type="bca", index=3) # r.square
+temp4 <- boot.ci(smixres2, type="bca", index=4) # mean
+
+smixres2.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+##Meadow
+temp1 <- boot.ci(smeares, type="bca", index=1) # intercept 
+temp2 <- boot.ci(smeares, type="bca", index=2) # slope
+temp3 <- boot.ci(smeares, type="bca", index=3) # r.square
+temp4 <- boot.ci(smeares, type="bca", index=4) # mean
+
+smeares.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(smeares1, type="bca", index=1) # intercept 
+temp2 <- boot.ci(smeares1, type="bca", index=2) # slope
+temp3 <- boot.ci(smeares1, type="bca", index=3) # r.square
+temp4 <- boot.ci(smeares1, type="bca", index=4) # mean
+
+smeares1.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+temp1 <- boot.ci(smeares2, type="bca", index=1) # intercept 
+temp2 <- boot.ci(smeares2, type="bca", index=2) # slope
+temp3 <- boot.ci(smeares2, type="bca", index=3) # r.square
+temp4 <- boot.ci(smeares2, type="bca", index=4) # mean
+
+smeares2.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+
+##Sorensen
+par(mfrow = c(2, 2))
+##ALL Years (sor.boot.land.tiff)
+#Intercept
+mean.ci <- c(smeares.ci[1, 1], smixres.ci[1, 1], sforres.ci[1, 1])
+l.ci <- c(smeares.ci[1, 2], smixres.ci[1, 2], sforres.ci[1, 2])
+s.ci <- c(smeares.ci[1, 3], smixres.ci[1, 3], sforres.ci[1, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+title("All Years - Sorensen Estimator", outer = TRUE, cex = 1.5)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#Dissimilarity
+mean.ci <- c(smeares.ci[4, 1], smixres.ci[4, 1], sforres.ci[4, 1])
+l.ci <- c(smeares.ci[4, 2], smixres.ci[4, 2], sforres.ci[4, 2])
+s.ci <- c(smeares.ci[4, 3], smixres.ci[4, 3], sforres.ci[4, 3])
+plot(1:3, 1 - mean.ci, xaxt = "n", ylim = c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = 1 - l.ci, y1 = 1 - s.ci)
+points(1:3, 1 - l.ci, lwd = 1.5, pch = "-")
+points(1:3, 1 - s.ci, lwd = 1.5, pch = "-")
+
+#Slope
+mean.ci <- c(smeares.ci[2, 1], smixres.ci[2, 1], swoores.ci[2, 1])
+l.ci <- c(smeares.ci[2, 2], smixres.ci[2, 2], swoores.ci[2, 2])
+s.ci <- c(smeares.ci[2, 3], smixres.ci[2, 3], swoores.ci[2, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#R-Square
+mean.ci <- c(smeares.ci[3, 1], smixres.ci[3, 1], swoores.ci[3, 1])
+l.ci <- c(smeares.ci[3, 2], smixres.ci[3, 2], swoores.ci[3, 2])
+s.ci <- c(smeares.ci[3, 3], smixres.ci[3, 3], swoores.ci[3, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+##First Year (sor.boot.land1.tiff)
+#Intercept
+mean.ci <- c(smeares1.ci[1, 1], smixres1.ci[1, 1], sforres1.ci[1, 1])
+l.ci <- c(smeares1.ci[1, 2], smixres1.ci[1, 2], sforres1.ci[1, 2])
+s.ci <- c(smeares1.ci[1, 3], smixres1.ci[1, 3], sforres1.ci[1, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+title("First Year - Sorensen Estimator", outer = TRUE, cex = 1.5)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#Dissimilarity
+mean.ci <- c(smeares1.ci[4, 1], smixres1.ci[4, 1], sforres1.ci[4, 1])
+l.ci <- c(smeares1.ci[4, 2], smixres1.ci[4, 2], sforres1.ci[4, 2])
+s.ci <- c(smeares1.ci[4, 3], smixres1.ci[4, 3], sforres1.ci[4, 3])
+plot(1:3, 1 - mean.ci, xaxt = "n", ylim = c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = 1 - l.ci, y1 = 1 - s.ci)
+points(1:3, 1 - l.ci, lwd = 1.5, pch = "-")
+points(1:3, 1 - s.ci, lwd = 1.5, pch = "-")
+
+#Slope
+mean.ci <- c(smeares1.ci[2, 1], smixres1.ci[2, 1], swoores1.ci[2, 1])
+l.ci <- c(smeares1.ci[2, 2], smixres1.ci[2, 2], swoores1.ci[2, 2])
+s.ci <- c(smeares1.ci[2, 3], smixres1.ci[2, 3], swoores1.ci[2, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#R-Square
+mean.ci <- c(smeares1.ci[3, 1], smixres1.ci[3, 1], swoores1.ci[3, 1])
+l.ci <- c(smeares1.ci[3, 2], smixres1.ci[3, 2], swoores1.ci[3, 2])
+s.ci <- c(smeares1.ci[3, 3], smixres1.ci[3, 3], swoores1.ci[3, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+##Second Year (sor.boot.land2.tiff)
+#Intercept
+mean.ci <- c(smeares2.ci[1, 1], smixres2.ci[1, 1], sforres2.ci[1, 1])
+l.ci <- c(smeares2.ci[1, 2], smixres2.ci[1, 2], sforres2.ci[1, 2])
+s.ci <- c(smeares2.ci[1, 3], smixres2.ci[1, 3], sforres2.ci[1, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+title("Second Year - Sorensen Estimator", outer = TRUE, cex = 1.5)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#Dissimilarity
+mean.ci <- c(smeares2.ci[4, 1], smixres2.ci[4, 1], sforres2.ci[4, 1])
+l.ci <- c(smeares2.ci[4, 2], smixres2.ci[4, 2], sforres2.ci[4, 2])
+s.ci <- c(smeares2.ci[4, 3], smixres2.ci[4, 3], sforres2.ci[4, 3])
+plot(1:3, 1 - mean.ci, xaxt = "n", ylim = c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = 1 - l.ci, y1 = 1 - s.ci)
+points(1:3, 1 - l.ci, lwd = 1.5, pch = "-")
+points(1:3, 1 - s.ci, lwd = 1.5, pch = "-")
+
+#Slope
+mean.ci <- c(smeares2.ci[2, 1], smixres2.ci[2, 1], swoores2.ci[2, 1])
+l.ci <- c(smeares2.ci[2, 2], smixres2.ci[2, 2], swoores2.ci[2, 2])
+s.ci <- c(smeares2.ci[2, 3], smixres2.ci[2, 3], swoores2.ci[2, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
+
+#R-Square
+mean.ci <- c(smeares2.ci[3, 1], smixres2.ci[3, 1], swoores2.ci[3, 1])
+l.ci <- c(smeares2.ci[3, 2], smixres2.ci[3, 2], swoores2.ci[3, 2])
+s.ci <- c(smeares2.ci[3, 3], smixres2.ci[3, 3], swoores2.ci[3, 3])
+plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+axis(1, at = 1:3, labels = c("Agri", "Mixed", "Forest"))
+segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+points(1:3, l.ci, lwd = 1.5, pch = "-")
+points(1:3, s.ci, lwd = 1.5, pch = "-")
