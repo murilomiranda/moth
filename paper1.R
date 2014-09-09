@@ -33,7 +33,7 @@ hist(DIST2[, 3], main = "IGEOE", xlab = "Geographic distance (m)", ylab = "Frequ
 data <- read.csv("data.csv", h = T)
 head(data)
 
-source('chaom.R')
+source('chao.R')
 sample1 <- chao(1, 1, "sample1")
 comment(sample1) <- "Sample1"
 sample2 <- chao(2, 2, "sample2")
