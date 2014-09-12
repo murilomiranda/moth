@@ -1,0 +1,1608 @@
+---
+title: "Bootstrapping"
+author: "Murilo Miranda"
+date: "11 Sep 2014"
+output: pdf_document
+---
+
+## Load Data and Codes
+* Read dataset with id, site, period, species, abund
+
+```{r loaddata}
+data <- read.csv("data.csv", h = T)
+head(data)
+
+library(xtable)
+library(boot)
+source('chao.R')
+source('distanc.R')
+```
+
+
+## Distances
+The distances between pairs were calculated using QGIS for IPCC and IGeoE:
+
+* Hayford Gauss IPCC: 
+
+```{r ipcc}
+dist <- read.csv("dist_mat_ipcc.csv", h = T)
+dist <- dist[-1]
+DIST1 <- distanc(dist)
+head(DIST1)
+```
+
+* Hayford Gauss IGeoE
+
+```{r igeoe}
+dist <- read.csv("dist_mat_igeoe.csv", h = T)
+dist <- dist[-1]
+DIST2 <- distanc(dist)
+head(DIST2)
+```
+
+```{r histdistanc}
+par(mfrow=c(2, 1))
+hist(DIST1[, 3], main = "IPCC", xlab = "Geographic distance (m)", ylab = "Frequency")
+hist(DIST2[, 3], main = "IGEOE", xlab = "Geographic distance (m)", ylab = "Frequency")
+```
+
+The histograms have the same behavior, then I chose the first vector of distances (IPCC) for analysing the data.
+
+## Data
+Sorensen and Jaccard Estimators were estimated using unseen species (Chao et al 2005). The data-set was subseted by sample. Variables created from the chao-function have the following columns:
+
+```{r calcbeta}
+sample1 <- chao(1, 1, "sample1")
+sample2 <- chao(2, 2, "sample2")
+sample3 <- chao(3, 3, "sample3")
+sample4 <- chao(4, 4, "sample4")
+sample5 <- chao(5, 5, "sample5")
+sample6 <- chao(6, 6, "sample6")
+```
+
+ - p: sampling period.
+ - s1: the code of sample 1. 
+ - s2: the code of sample 2.
+ - n: the number of observed species in the sample 1.
+ - nsp1: the number of species in the sample 1.
+ - m: the number of observed species in the sample 2.
+ - nsp2: the number of species in the sample 2.
+ - nsh: the number of observed shared species in the two samples.
+ - fm1: the observed number of shared species that occur once in sample 2.
+ - fm2: the observed number of shared species that occur twice in sample 2.
+ - f1m: the observed number of shared species that occur once in sample 1.
+ - f2m: the observed number of shared species that occur twice in sample 1.
+ - u_pt1: abundance sum of shared species divided by species number for the sample 1.
+ - v_pt1: abundance sum of shared species divided by species number for the sample 2.
+ - Junad: Jaccard unadjusted estimator.
+ - Lunad: Sorensen unadjusted estimator.
+ - U: u_pt1 plus unseen species for the sample 2.
+ - V: v_pt1 plus unseen species for the sample 1.
+ - Jabd: Jaccard adjusted estimator.
+ - Labd: Sorensen adjusted estimator.
+
+```{r}
+head(sample1)
+```
+
+
+## Exploratory Analysis
+These functions were used to synthesize the samples for each year. Moth samplings were conducted for two years (2011 and 2012), each year had three sampling period.
+
+```{r}
+trisamples <- function(base1, base2, base3, vr){
+  base <- matrix(0, nrow = dim(base1)[1])
+  for(i in 1:dim(base1)[1]){
+    base[i] <- (base1[i, vr] + base2[i, vr] + base3[i, vr])/3
+  }
+  base
+}
+
+bisamples <- function(base1, base2){
+  base <- matrix(0, nrow = length(base1))
+  for(i in 1:length(base1)){
+    base[i] <- (base1[i] + base2[i])/2
+  }
+  base
+}
+```
+
+* Calculated the dissimilarity average per site for first year
+
+```{r}
+Jperiod1 <- trisamples(sample1, sample2, sample3, 19)
+Lperiod1 <- trisamples(sample1, sample2, sample3, 20)
+```
+
+```{r firstyear, fig.width = 12}
+par(mfrow=c(1, 2))
+plot(DIST1[, 3], (1 - Jperiod1), ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = 
+       expression(~beta*"-diversity"), main = "Jaccard")
+plot(DIST1[, 3], (1 - Lperiod1), ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = 
+       expression(~beta*"-diversity"), main = "Sorensen")
+```
+
+* Calculated the dissimilarity average per site for second year
+
+```{r}
+Jperiod2 <- trisamples(sample4, sample5, sample6, 19)
+Lperiod2 <- trisamples(sample4, sample5, sample6, 20)
+```
+
+```{r secondyear, fig.width = 12}
+par(mfrow=c(1, 2))
+plot(DIST1[, 3], (1 - Jperiod2), ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = 
+       expression(~beta*"-diversity"), main = "Jaccard")
+plot(DIST1[, 3], (1 - Lperiod2), ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = 
+       expression(~beta*"-diversity"), main = "Sorensen")
+```
+
+* Calculated the dissimilarity average per site for both years
+
+```{r}
+Jperiod <- bisamples(Jperiod1, Jperiod2)
+Lperiod <- bisamples(Lperiod1, Lperiod2)
+```
+
+```{r allyears, fig.width = 12}
+par(mfrow=c(1, 2))
+plot(DIST1[, 3], (1 - Jperiod), ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = 
+       expression(~beta*"-diversity"), main = "Jaccard")
+plot(DIST1[, 3], (1 - Lperiod), ylim = c(0, 1), xlab = "Geographic Distance (m)", ylab = 
+       expression(~beta*"-diversity"), main = "Sorensen")
+```
+
+**DATASET**: I created a new database with six columns:
+
+  - p: no functionality, I created just to standardize with other functions previously created. 
+  - s1: site 1
+  - s2: site 2
+  - Jabd: Jaccard adjusted estimator
+  - Labd: Sorensen adjusted estimator
+  - ipcc: distance between site 1 and site 2 (Hayford Gauss IPCC)
+
+```{r setdata}
+b.div.mean <- cbind(sample1[, 1], sample1[, 2], sample1[, 3], Jperiod, Lperiod, DIST1[, 3])
+colnames(b.div.mean) <- c("p", "s1", "s2", "Jabd", "Labd", "ipcc")
+
+head(b.div.mean)
+```
+
+Samples were taken in three landscapes that represent the farmland abandonment gradient: meadow-dominated, shrub-dominated and forest-dominated. In each landscape had 28 fixed sampling sites divided into four biotopes (meadow, short shrub, tall shrub and woodland), totaling 84 sampling sites.
+
+* forest-dominated:
+
+```{r}
+mf <- c(56) #m - meadow
+sf <- c(36, 39, 42, 45, 46) #s - short shrub
+tf <- c(34, 49) #t - tall shrub
+wf <- c(29, 30, 31, 32, 33, 35, 37, 38, 40, 41, 43, 44, 47, 48, 50, 51, 52, 53, 54, 55) 
+#w - woodland
+```
+* shrub-dominated (m - mixed)
+
+```{r}
+mm <- c(68, 75, 77, 84)
+sm <- c(60, 64, 65, 66, 67, 70, 78, 79, 82)
+tm <- c(57, 58, 59, 61, 62, 63, 69, 71, 72, 74, 76)
+wm <- c(73, 80, 81, 83)
+```
+* meadow-dominated (a - agriculture)
+
+```{r}
+ma <- c(1, 9, 14, 15, 16, 17, 18, 19, 21, 23, 24, 25, 27)
+sa <- c(2, 8, 10, 11, 12, 13, 20)
+ta <- c(3, 4, 5, 6, 7, 28)
+wa <- c(22, 26)
+```
+
+# SECOND APPROACH
+
+```{r, echo = FALSE}
+interc.plot3 <- function(base1, base2, base3){
+  mean.ci <- c(base1[1, 1], base2[1, 1], base3[1, 1])
+  l.ci <- c(base1[1, 2], base2[1, 2], base3[1, 2])
+  s.ci <- c(base1[1, 3], base2[1, 3], base3[1, 3])
+  plot(1:3, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+  #title("All Years - Jaccard Estimator", outer = TRUE, cex = 1.5)
+  axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+  segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+  points(1:3, l.ci, lwd = 1.5, pch = "-")
+  points(1:3, s.ci, lwd = 1.5, pch = "-")
+}
+
+dissim.plot3 <- function(base1, base2, base3){
+  mean.ci <- c(base1[4, 1], base2[4, 1], base3[4, 1])
+  l.ci <- c(base1[4, 2], base2[4, 2], base3[4, 2])
+  s.ci <- c(base1[4, 3], base2[4, 3], base3[4, 3])
+  plot(1:3, 1 - mean.ci, xaxt = "n", ylim =c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+  axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+  segments(x0 = 1:3, y0 = 1 - l.ci, y1 = 1 - s.ci)
+  points(1:3, 1 - l.ci, lwd = 1.5, pch = "-")
+  points(1:3, 1 - s.ci, lwd = 1.5, pch = "-")
+}
+
+slope.plot3 <- function(base1, base2, base3){
+  mean.ci <- c(base1[2, 1], base2[2, 1], base3[2, 1])
+  l.ci <- c(base1[2, 2], base2[2, 2], base3[2, 2])
+  s.ci <- c(base1[2, 3], base2[2, 3], base3[2, 3])
+  plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+  axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+  segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+  points(1:3, l.ci, lwd = 1.5, pch = "-")
+  points(1:3, s.ci, lwd = 1.5, pch = "-")
+}
+
+rsquar.plot3 <- function(base1, base2, base3){
+  mean.ci <- c(base1[3, 1], base2[3, 1], base3[3, 1])
+  l.ci <- c(base1[3, 2], base2[3, 2], base3[3, 2])
+  s.ci <- c(base1[3, 3], base2[3, 3], base3[3, 3])
+  plot(1:3, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+  axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+  segments(x0 = 1:3, y0 = l.ci, y1 = s.ci)
+  points(1:3, l.ci, lwd = 1.5, pch = "-")
+  points(1:3, s.ci, lwd = 1.5, pch = "-")
+}
+```
+
+```{r}
+# function to obtain regression weights 
+bs.jac <- function(formula, data, ind){
+  d <- data[ind,] # allows boot to select sample
+  fit <- lm(formula, data = d)
+  return(c(coef(fit), summary(fit)$r.square, mean(d[, 4]))) 
+} 
+
+bs.sor <- function(formula, data, ind){
+  d <- data[ind,] # allows boot to select sample
+  fit <- lm(formula, data = d)
+  return(c(coef(fit), summary(fit)$r.square, mean(d[, 5]))) 
+} 
+```
+
+**within landscapes**
+
+```{r}
+agr.mea <- landsc_within(b.div.mean, ma, ma)
+shr.shr <- landsc_within(b.div.mean, sm, sm)
+tal.shr <- landsc_within(b.div.mean, tm, tm)
+for.woo <- landsc_within(b.div.mean, wf, wf)
+mix.shr <- landsc_within(b.div.mean, c(sm, tm), c(sm, tm))
+```
+
+This function creates a database for each landscape. Also, I analyzed separately short and tall shrub within the shrub-dominated landscape.
+
+In this analysis only the biotopes that correspond the type of the landscape were considered.
+
+**Regression models**
+
+- Jaccard Estimator
+
+```{r}
+jmodelfor.woo <- lm((1 - for.woo[, 4]) ~ for.woo[, 6])
+jmodelmix.shr <- lm((1 - mix.shr[, 4]) ~ mix.shr[, 6])
+jmodelagr.mea <- lm((1 - agr.mea[, 4]) ~ agr.mea[, 6])
+jmodelshr.shr <- lm((1 - shr.shr[, 4]) ~ shr.shr[, 6])
+jmodeltal.shr <- lm((1 - tal.shr[, 4]) ~ tal.shr[, 6])
+```
+
+- Sorensen Estimator
+
+```{r}
+smodelfor.woo <- lm((1 - for.woo[, 5]) ~ for.woo[, 6])
+smodelmix.shr <- lm((1 - mix.shr[, 5]) ~ mix.shr[, 6])
+smodelagr.mea <- lm((1 - agr.mea[, 5]) ~ agr.mea[, 6])
+smodelshr.shr <- lm((1 - shr.shr[, 5]) ~ shr.shr[, 6])
+smodeltal.shr <- lm((1 - tal.shr[, 5]) ~ tal.shr[, 6])
+```
+
+- Short and tall shrubs are together in Shrub (right side: Jaccard and left side: Sorensen)
+
+1. Forest
+
+```{r forest_within, fig.width = 12, fig.height = 4, echo = FALSE}
+par(mfrow=c(1, 2))
+plot(for.woo[, 6], 1 - for.woo[, 4], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelfor.woo)[[1]], b = coef(jmodelfor.woo)[[2]], col = 2, lwd = 4.5)
+plot(for.woo[, 6], 1 - for.woo[, 5], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelfor.woo)[[1]], b = coef(smodelfor.woo)[[2]], col = 2, lwd = 4.5)
+```
+
+2. Shrub
+
+```{r shrub_within, fig.width = 12, fig.height = 4, echo = FALSE}
+par(mfrow=c(1, 2))
+plot(mix.shr[, 6], 1 - mix.shr[, 4], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelmix.shr)[[1]], b = coef(jmodelmix.shr)[[2]], col = 2, lwd = 4.5)
+plot(mix.shr[, 6], 1 - mix.shr[, 5], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelmix.shr)[[1]], b = coef(smodelmix.shr)[[2]], col = 2, lwd = 4.5)
+```
+
+3. Meadow
+
+```{r meadow_within, fig.width = 12, fig.height = 4, echo = FALSE}
+par(mfrow=c(1, 2))
+plot(agr.mea[, 6], 1 - agr.mea[, 4], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelagr.mea)[[1]], b = coef(jmodelagr.mea)[[2]], col = 2, lwd = 4.5)
+plot(agr.mea[, 6], 1 - agr.mea[, 5], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelagr.mea)[[1]], b = coef(smodelagr.mea)[[2]], col = 2, lwd = 4.5)
+```
+
+- Short and tall shrubs are separated (right side: Jaccard and left side: Sorensen)
+
+4. Tall Shrub
+
+```{r tall_within, fig.width = 12, fig.height = 4, echo = FALSE}
+par(mfrow=c(1, 2))
+plot(tal.shr[, 6], 1 - tal.shr[, 4], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodeltal.shr)[[1]], b = coef(jmodeltal.shr)[[2]], col = 2, lwd = 4.5)
+plot(tal.shr[, 6], 1 - tal.shr[, 5], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodeltal.shr)[[1]], b = coef(smodeltal.shr)[[2]], col = 2, lwd = 4.5)
+```
+
+5. Short Shrub
+
+```{r short_within, fig.width = 12, fig.height = 4, echo = FALSE}
+par(mfrow=c(1, 2))
+plot(shr.shr[, 6], 1 - shr.shr[, 4], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelshr.shr)[[1]], b = coef(jmodelshr.shr)[[2]], col = 2, lwd = 4.5)
+plot(shr.shr[, 6], 1 - shr.shr[, 5], ylim = c(0, 1), xlim = c(0, 2000), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelshr.shr)[[1]], b = coef(smodelshr.shr)[[2]], col = 2, lwd = 4.5)
+```
+
+* Mean Dissimilaritiy for each landscape (with standard deviations)
+
+```{r dissim3_within, fig.width = 12, fig.height = 4}
+par(mfrow=c(1, 2))
+m.data <- c(mean(for.woo[, 4]), mean(mix.shr[, 4]), mean(agr.mea[, 4]))
+m.li <- c(mean(for.woo[, 4]) - sd(for.woo[, 4]), mean(mix.shr[, 4]) - sd(mix.shr[, 4]), 
+          mean(agr.mea[, 4]) - sd(agr.mea[, 4]))
+m.lu <- c(mean(for.woo[, 4]) + sd(for.woo[, 4]), mean(mix.shr[, 4]) + sd(mix.shr[, 4]), 
+          mean(agr.mea[, 4]) + sd(agr.mea[, 4]))
+plot(1:3, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Jaccard adjusted")
+axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+segments(x0 = 1:3, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+
+m.data <- c( mean(for.woo[, 5]), mean(mix.shr[, 5]), mean(agr.mea[, 5]))
+m.li <- c(mean(for.woo[, 5]) - sd(for.woo[, 5]), mean(mix.shr[, 5]) - sd(mix.shr[, 5]), 
+          mean(agr.mea[, 5]) - sd(agr.mea[, 5]))
+m.lu <- c(mean(for.woo[, 5]) + sd(for.woo[, 5]), mean(mix.shr[, 5]) + sd(mix.shr[, 5]), 
+          mean(agr.mea[, 5]) + sd(agr.mea[, 5]))
+plot(1:3, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Sorensen adjusted")
+axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+segments(x0 = 1:3, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+```
+
+* Mean Dissimilarity for each landscape (with tall and short shrub separately)
+
+```{r dissim4_within, fig.width = 12, fig.height = 4}
+par(mfrow=c(1, 2))
+m.data <- c(mean(for.woo[, 4]), mean(tal.shr[, 4]), mean(shr.shr[, 4]), mean(agr.mea[, 4]))
+m.li <- c(mean(for.woo[, 4]) - sd(for.woo[, 4]), mean(tal.shr[, 4]) - sd(tal.shr[, 4]), 
+          mean(shr.shr[, 4]) - sd(shr.shr[, 4]), mean(agr.mea[, 4]) - sd(agr.mea[, 4]))
+m.lu <- c(mean(for.woo[, 4]) + sd(for.woo[, 4]), mean(tal.shr[, 4]) + sd(tal.shr[, 4]), 
+          mean(shr.shr[, 4]) + sd(shr.shr[, 4]), mean(agr.mea[, 4]) + sd(agr.mea[, 4]))
+plot(1:4, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", ylab = 
+       expression(~beta*"-diversity"), main = "Jaccard adjusted")
+axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+segments(x0 = 1:4, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+
+m.data <- c(mean(for.woo[, 5]), mean(tal.shr[, 5]), mean(shr.shr[, 5]), mean(agr.mea[, 5]))
+m.li <- c(mean(for.woo[, 5]) - sd(for.woo[, 5]), mean(tal.shr[, 5]) - sd(tal.shr[, 5]), 
+          mean(shr.shr[, 5]) - sd(shr.shr[, 5]), mean(agr.mea[, 5]) - sd(agr.mea[, 5]))
+m.lu <- c(mean(for.woo[, 5]) + sd(for.woo[, 5]), mean(tal.shr[, 5]) + sd(tal.shr[, 5]), 
+          mean(shr.shr[, 5]) + sd(shr.shr[, 5]), mean(agr.mea[, 5]) + sd(agr.mea[, 5]))
+plot(1:4, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Sorensen adjusted")
+axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+segments(x0 = 1:4, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+```
+
+**between landscapes**
+
+```{r}
+landsc_between <- function(base, s1, s2){
+  result <- NULL
+  for(i in s1){
+    for(j in s2){
+      result <- rbind(result, base[(base[, 2] == i & base[, 3] == j) | 
+                                     (base[, 2] == j & base[, 3] == i), ])
+    }
+  }
+  result
+}
+```
+
+This function creates a database of pairs of biotypes of the same type, but are in different landscapes. Also, I analyzed separately short and tall shrub among landscapes.
+
+```{r}
+mea <- landsc_between(b.div.mean, ma, c(mm, mf))
+shr <- landsc_between(b.div.mean, sm, c(sa, sf))
+tal <- landsc_between(b.div.mean, tm, c(ta, tf))
+woo <- landsc_between(b.div.mean, wf, c(wa, wm))
+mix <- rbind(shr, tal)
+```
+
+**Regreesion models**
+
+- Jaccard Estimator
+
+```{r}
+jmodelwoo <- lm((1 - woo[, 4]) ~ woo[, 6])
+jmodelmix <- lm((1 - mix[, 4]) ~ mix[, 6])
+jmodelmea <- lm((1 - mea[, 4]) ~ mea[, 6])
+jmodelshr <- lm((1 - shr[, 4]) ~ shr[, 6])
+jmodeltal <- lm((1 - tal[, 4]) ~ tal[, 6])
+```
+
+- Sorensen Estimator
+
+```{r}
+smodelwoo <- lm((1 - woo[, 5]) ~ woo[, 6])
+smodelmix <- lm((1 - mix[, 5]) ~ mix[, 6])
+smodelmea <- lm((1 - mea[, 5]) ~ mea[, 6])
+smodelshr <- lm((1 - shr[, 5]) ~ shr[, 6])
+smodeltal <- lm((1 - tal[, 5]) ~ tal[, 6])
+```
+
+- Short and tall shrubs are together in Shrub (right side: Jaccard and left side: Sorensen)
+
+1. Forest
+
+```{r forest_between, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(woo[, 6], 1 - woo[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelwoo)[[1]], b = coef(jmodelwoo)[[2]], col = 2, lwd = 4.5)
+plot(woo[, 6], 1 - woo[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelwoo)[[1]], b = coef(smodelwoo)[[2]], col = 2, lwd = 4.5)
+```
+
+2. Shrub
+
+```{r shrub_between, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(mix[, 6], 1 - mix[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelmix)[[1]], b = coef(jmodelmix)[[2]], col = 2, lwd = 4.5)
+plot(mix[, 6], 1 - mix[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelmix)[[1]], b = coef(smodelmix)[[2]], col = 2, lwd = 4.5)
+```
+
+3. Meadow
+
+```{r meadow_between, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(mea[, 6], 1 - mea[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelmea)[[1]], b = coef(jmodelmea)[[2]], col = 2, lwd = 4.5)
+plot(mea[, 6], 1 - mea[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelmea)[[1]], b = coef(smodelmea)[[2]], col = 2, lwd = 4.5)
+```
+
+- Short and tall shrubs are separated (right side: Jaccard and left side: Sorensen)
+
+4. Tall Shrub
+
+```{r tall_between, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(tal[, 6], 1 - tal[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodeltal)[[1]], b = coef(jmodeltal)[[2]], col = 2, lwd = 4.5)
+plot(tal[, 6], 1 - tal[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodeltal)[[1]], b = coef(smodeltal)[[2]], col = 2, lwd = 4.5)
+```
+
+5. Short Shrub
+
+```{r short_between, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(shr[, 6], 1 - shr[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelshr)[[1]], b = coef(jmodelshr)[[2]], col = 2, lwd = 4.5)
+plot(shr[, 6], 1 - shr[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelshr)[[1]], b = coef(smodelshr)[[2]], col = 2, lwd = 4.5)
+```
+
+* Mean Dissimilarity for each landscape (with standard deviations)
+
+```{r dissim3_between, fig.width = 12, fig.height = 4}
+par(mfrow=c(1, 2))
+m.data <- c(mean(woo[, 4]), mean(mix[, 4]), mean(mea[, 4]) )
+m.li <- c(mean(woo[, 4]) - sd(woo[, 4]), mean(mix[, 4]) - sd(mix[, 4]), 
+          mean(mea[, 4]) - sd(mea[, 4]))
+m.lu <- c(mean(woo[, 4]) + sd(woo[, 4]), mean(mix[, 4]) + sd(mix[, 4]), 
+          mean(mea[, 4]) + sd(mea[, 4]))
+plot(1:3, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Jaccard adjusted")
+axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+segments(x0 = 1:3, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+
+m.data <- c(mean(woo[, 5]), mean(mix[, 5]), mean(mea[, 5]) )
+m.li <- c(mean(woo[, 5]) - sd(woo[, 5]), mean(mix[, 5]) - sd(mix[, 5]), 
+          mean(mea[, 5]) - sd(mea[, 5]))
+m.lu <- c(mean(woo[, 5]) + sd(woo[, 5]), mean(mix[, 5]) + sd(mix[, 5]), 
+          mean(mea[, 5]) + sd(mea[, 5]))
+plot(1:3, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Sorensen adjusted")
+axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+segments(x0 = 1:3, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+```
+
+* Mean Dissimilarity for each landscape (with tall and short shrub separately)
+
+```{r dissim4_between, fig.width = 12, fig.height = 4}
+par(mfrow=c(1, 2))
+m.data <- c(mean(woo[, 4]), mean(tal[, 4]), mean(shr[, 4]), mean(mea[, 4]) )
+m.li <- c(mean(woo[, 4]) - sd(woo[, 4]), mean(tal[, 4]) - sd(tal[, 4]), 
+          mean(shr[, 4]) - sd(shr[, 4]), mean(mea[, 4]) - sd(mea[, 4]))
+m.lu <- c(mean(woo[, 4]) + sd(woo[, 4]), mean(tal[, 4]) + sd(tal[, 4]), 
+          mean(shr[, 4]) + sd(shr[, 4]), mean(mea[, 4]) + sd(mea[, 4]))
+plot(1:4, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Jaccard adjusted")
+axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+segments(x0 = 1:4, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+
+m.data <- c(mean(woo[, 5]), mean(tal[, 5]), mean(shr[, 5]), mean(mea[, 5]) )
+m.li <- c(mean(woo[, 5]) - sd(woo[, 5]), mean(tal[, 5]) - sd(tal[, 5]), 
+          mean(shr[, 5]) - sd(shr[, 5]), mean(mea[, 5]) - sd(mea[, 5]))
+m.lu <- c(mean(woo[, 5]) + sd(woo[, 5]), mean(tal[, 5]) + sd(tal[, 5]), 
+          mean(shr[, 5]) + sd(shr[, 5]), mean(mea[, 5]) + sd(mea[, 5]))
+plot(1:4, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Sorensen adjusted")
+axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+segments(x0 = 1:4, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+```
+
+**Biotopes**
+
+```{r}
+mfma <- c(mf, mm, ma)
+sfma <- c(sf, sm, sa)
+tfma <- c(tf, tm, ta)
+wfma <- c(wf, wm, wa)
+mixf <- c(sf, sm, sa, tf, tm, ta)
+```
+
+This function creates databse for each biotope independent landscape.
+
+```{r}
+mea.bio <- landsc_within(b.div.mean, mfma, mfma)
+sho.bio <- landsc_within(b.div.mean, sfma, sfma)
+tal.bio <- landsc_within(b.div.mean, tfma, tfma)
+woo.bio <- landsc_within(b.div.mean, wfma, wfma)
+mix.bio <- landsc_within(b.div.mean, mixf, mixf)
+```
+
+**Regression models**
+
+- Jaccard Estimator
+
+```{r}
+jmodelwoo.bio <- lm((1 - woo.bio[, 4]) ~ woo.bio[, 6])
+jmodelmix.bio <- lm((1 - mix.bio[, 4]) ~ mix.bio[, 6])
+jmodelmea.bio <- lm((1 - mea.bio[, 4]) ~ mea.bio[, 6])
+jmodelsho.bio <- lm((1 - sho.bio[, 4]) ~ sho.bio[, 6])
+jmodeltal.bio <- lm((1 - tal.bio[, 4]) ~ tal.bio[, 6])
+```
+
+- Sorensen Estimator
+
+```{r}
+smodelwoo.bio <- lm((1 - woo.bio[, 5]) ~ woo.bio[, 6])
+smodelmix.bio <- lm((1 - mix.bio[, 5]) ~ mix.bio[, 6])
+smodelmea.bio <- lm((1 - mea.bio[, 5]) ~ mea.bio[, 6])
+smodelsho.bio <- lm((1 - sho.bio[, 5]) ~ sho.bio[, 6])
+smodeltal.bio <- lm((1 - tal.bio[, 5]) ~ tal.bio[, 6])
+```
+
+- Short and tall shrubs are together (right side: Jaccard and left side: Sorensen)
+
+1. Forest
+
+```{r forest_all, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(woo.bio[, 6], 1 - woo.bio[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelwoo.bio)[[1]], b = coef(jmodelwoo.bio)[[2]], col = 2, lwd = 4.5)
+plot(woo.bio[, 6], 1 - woo.bio[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelwoo.bio)[[1]], b = coef(smodelwoo.bio)[[2]], col = 2, lwd = 4.5)
+```
+
+2. Shrub
+
+```{r shrub_all, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(mix.bio[, 6], 1 - mix.bio[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelmix.bio)[[1]], b = coef(jmodelmix.bio)[[2]], col = 2, lwd = 4.5)
+plot(mix.bio[, 6], 1 - mix.bio[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelmix.bio)[[1]], b = coef(smodelmix.bio)[[2]], col = 2, lwd = 4.5)
+```
+
+3. Meadow
+
+```{r meadow_all, fig.width = 12, fig.height = 4, echo=FALSE}
+par(mfrow=c(1, 2))
+plot(mea.bio[, 6], 1 - mea.bio[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelmea.bio)[[1]], b = coef(jmodelmea.bio)[[2]], col = 2, lwd = 4.5)
+plot(mea.bio[, 6], 1 - mea.bio[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelmea.bio)[[1]], b = coef(smodelmea.bio)[[2]], col = 2, lwd = 4.5)
+```
+
+- Short and tall shrubs are separated (right side: Jaccard and left side: Sorensen)
+
+4. Tall Shrub
+
+```{r tall_all, fig.width = 12, fig.height = 4, echo = FALSE}
+par(mfrow=c(1, 2))
+plot(tal.bio[, 6], 1 - tal.bio[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodeltal.bio)[[1]], b = coef(jmodeltal.bio)[[2]], col = 2, lwd = 4.5)
+plot(tal.bio[, 6], 1 - tal.bio[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodeltal.bio)[[1]], b = coef(smodeltal.bio)[[2]], col = 2, lwd = 4.5)
+```
+
+5. Short Shrub
+
+```{r short_all, fig.width = 12, fig.height = 4, echo = FALSE}
+par(mfrow=c(1, 2))
+plot(sho.bio[, 6], 1 - sho.bio[, 4], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(jmodelsho.bio)[[1]], b = coef(jmodelsho.bio)[[2]], col = 2, lwd = 4.5)
+plot(sho.bio[, 6], 1 - sho.bio[, 5], ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", ylab = expression(~beta*"-diversity"))
+abline(a = coef(smodelsho.bio)[[1]], b = coef(smodelsho.bio)[[2]], col = 2, lwd = 4.5)
+```
+
+* Mean Dissimilarity for each landscape (with standard deviations)
+
+```{r dissim3_all, fig.width = 12, fig.height = 4}
+par(mfrow=c(1, 2))
+m.data <- c(mean(woo.bio[, 4]), mean(mix.bio[, 4]), mean(mea.bio[, 4]))
+m.li <- c(mean(woo.bio[, 4]) - sd(woo.bio[, 4]), mean(mix.bio[, 4]) - sd(mix.bio[, 4]), 
+          mean(mea.bio[, 4]) - sd(mea.bio[, 4]))
+m.lu <- c(mean(woo.bio[, 4]) + sd(woo.bio[, 4]), mean(mix.bio[, 4]) + sd(mix.bio[, 4]), 
+          mean(mea.bio[, 4]) + sd(mea.bio[, 4]))
+plot(1:3, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Jaccard adjusted")
+axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+segments(x0 = 1:3, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+
+m.data <- c( mean(woo.bio[, 5]), mean(mix.bio[, 5]), mean(mea.bio[, 5]))
+m.li <- c(mean(woo.bio[, 5]) - sd(woo.bio[, 5]), mean(mix.bio[, 5]) - sd(mix.bio[, 5]), 
+          mean(mea.bio[, 5]) - sd(mea.bio[, 5]))
+m.lu <- c(mean(woo.bio[, 5]) + sd(woo.bio[, 5]), mean(mix.bio[, 5]) + sd(mix.bio[, 5]), 
+          mean(mea.bio[, 5]) + sd(mea.bio[, 5]))
+plot(1:3, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Sorensen adjusted")
+axis(1, at = 1:3, labels = c("Forest", "Shrub", "Meadow"))
+segments(x0 = 1:3, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+```
+
+* Mean Dissimilarity for each landscape (with tall and short shrubs separately)
+
+```{r dissim4_all, fig.width = 12, fig.height = 4}
+par(mfrow=c(1, 2))
+m.data <- c(mean(woo.bio[, 4]), mean(tal.bio[, 4]), mean(sho.bio[, 4]), mean(mea.bio[, 4]))
+m.li <- c(mean(woo.bio[, 4]) - sd(woo.bio[, 4]), mean(tal.bio[, 4]) - sd(tal.bio[, 4]), 
+          mean(sho.bio[, 4]) - sd(sho.bio[, 4]), mean(mea.bio[, 4]) - sd(mea.bio[, 4]))
+m.lu <- c(mean(woo.bio[, 4]) + sd(woo.bio[, 4]), mean(tal.bio[, 4]) + sd(tal.bio[, 4]), 
+          mean(sho.bio[, 4]) + sd(sho.bio[, 4]), mean(mea.bio[, 4]) + sd(mea.bio[, 4]))
+plot(1:4, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Jaccard adjusted")
+axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+segments(x0 = 1:4, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+
+m.data <- c(mean(woo.bio[, 5]), mean(tal.bio[, 5]), mean(sho.bio[, 5]), mean(mea.bio[, 5]))
+m.li <- c(mean(woo.bio[, 5]) - sd(woo.bio[, 5]), mean(tal.bio[, 5]) - sd(tal.bio[, 5]), 
+          mean(sho.bio[, 5]) - sd(sho.bio[, 5]), mean(mea.bio[, 5]) - sd(mea.bio[, 5]))
+m.lu <- c(mean(woo.bio[, 5]) + sd(woo.bio[, 5]), mean(tal.bio[, 5]) + sd(tal.bio[, 5]), 
+          mean(sho.bio[, 5]) + sd(sho.bio[, 5]), mean(mea.bio[, 5]) + sd(mea.bio[, 5]))
+plot(1:4, 1 - m.data, xaxt = "n", ylim=c(0, 1), xlab = "", 
+     ylab = expression(~beta*"-diversity"), main = "Sorensen adjusted")
+axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+segments(x0 = 1:4, y0 = 1 - m.li, y1 = 1 - m.lu, col = 1)
+```
+
+* Mean Dissimilarity for each scale
+
+```{r}
+plot.scale <- function(base, estimator = 0){
+  #if estimator == 0: Jaccard, otherwise: Sorensen (default is Jaccard)
+  area <- base[, 6]
+  if(estimator) div <- base[, 5]
+  else div <- base[, 4]
+  plot(area, 1 - div, ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", 
+       ylab = expression(~beta*"-diversity"))
+  abline(v = c(115, 455, 1810), col = "gray", lwd = 1.5, lty = 2)
+  lines(1:115, rep(1 - mean(div[area <= 115]), 115), col = 2, lwd = 4.5)
+  lines(116:445, rep(1 - mean(div[(area <= 445) & (area > 115)]), 330), col = 2, lwd = 4.5)
+  lines(446:1810, rep(1 - mean(div[(area <= 1810) & (area > 445)]), 1365), col = 2, lwd = 4.5)
+  lines(1811:7500, rep(1 - mean(div[area > 1811]), 5690), col = 2, lwd = 4.5)
+}
+```
+
+1. Forest
+
+```{r forest_scale, fig.width = 12, fig.height = 6, echo = TRUE}
+par(mfrow=c(1, 2))
+plot.scale(woo.bio)
+plot.scale(woo.bio, 1)
+```
+
+2. Shrub
+
+```{r shrub_scale, fig.width = 12, fig.height = 6, echo = FALSE}
+par(mfrow=c(1, 2))
+plot.scale(mix.bio)
+plot.scale(mix.bio, 1)
+```
+
+3. Meadow
+
+```{r meadow_scale, fig.width = 12, fig.height = 6, echo = FALSE}
+par(mfrow=c(1, 2))
+plot.scale(mea.bio)
+plot.scale(mea.bio, 1)
+```
+
+* Mean Dissimilarity for each scale (with tall and short shrubs separately)
+
+4. Tall Shrub
+
+```{r tall_scale, fig.width = 12, fig.height = 6, echo = FALSE}
+par(mfrow=c(1, 2))
+plot.scale(tal.bio)
+plot.scale(tal.bio, 1)
+```
+
+5. Short Shrub
+
+```{r short_scale, fig.width = 12, fig.height = 6, echo = FALSE}
+par(mfrow=c(1, 2))
+plot.scale(sho.bio)
+plot.scale(sho.bio, 1)
+```
+
+
+## Bootstrapping 1
+
+### Mean Dissimilarity for each scale
+
+```{r}
+mean.fun <- function(data, ind){
+  mean(data[ind], na.rm = TRUE)
+}
+
+plot.boot <- function(base, ci.result, estimator = 0){
+  #if estimator == 0: Jaccard, otherwise: Sorensen (default is Jaccard)
+  area <- base[, 6]
+  if(estimator) div <- base[, 5]
+  else div <- base[, 4]
+  plot(area, 1 - div, ylim = c(0, 1), xlim = c(0, 7500), xlab = "Geographic Distance (m)", 
+       ylab = expression(~beta*"-diversity"))
+  abline(v = c(115, 455, 1810), col = "gray", lwd = 1.5, lty = 2)
+  lines(1:115, rep(ci.result[1, 1], 115), col = 2, lwd = 4.5)
+  lines(116:445, rep(ci.result[2, 1], 330), col = 2, lwd = 4.5)
+  lines(446:1810, rep(ci.result[3, 1], 1365), col = 2, lwd = 4.5)
+  lines(1811:7500, rep(ci.result[4, 1], 5690), col = 2, lwd = 4.5)
+  lines(1:115, rep(ci.result[1, 2], 115), col = 3, lwd = 4.5)
+  lines(116:445, rep(ci.result[2, 2], 330), col = 3, lwd = 4.5)
+  lines(446:1810, rep(ci.result[3, 2], 1365), col = 3, lwd = 4.5)
+  lines(1811:7500, rep(ci.result[4, 2], 5690), col = 3, lwd = 4.5)
+  lines(1:115, rep(ci.result[1, 3], 115), col = 3, lwd = 4.5)
+  lines(116:445, rep(ci.result[2, 3], 330), col = 3, lwd = 4.5)
+  lines(446:1810, rep(ci.result[3, 3], 1365), col = 3, lwd = 4.5)
+  lines(1811:7500, rep(ci.result[4, 3], 5690), col = 3, lwd = 4.5)
+}
+```
+
+1. Forest
+
+```{r forestscale_boot, fig.width = 12, fig.height = 6, echo = TRUE}
+jsf <- boot(data = 1 - woo.bio[woo.bio[, 6] <= 115, 4], statistic = mean.fun, R = 2000)
+jmf <- boot(data = 1 - woo.bio[(woo.bio[, 6] <= 445) & (woo.bio[, 6] > 115), 4], 
+            statistic = mean.fun, R = 2000)
+jlf <- boot(data = 1 - woo.bio[(woo.bio[, 6] <= 1810) & (woo.bio[, 6] > 445), 4], 
+            statistic = mean.fun, R = 2000)
+jxf <- boot(data = 1 - woo.bio[woo.bio[, 6] > 1811, 4], statistic = mean.fun, R = 2000)
+
+ci.jsf <- boot.ci(jsf, type = "bca")
+ci.jmf <- boot.ci(jmf, type = "bca")
+ci.jlf <- boot.ci(jlf, type = "bca")
+ci.jxf <- boot.ci(jxf, type = "bca")
+
+jci.for <- rbind(cbind(ci.jsf$t0, ci.jsf$bca[4], ci.jsf$bca[5]), cbind(ci.jmf$t0, 
+           ci.jmf$bca[4], ci.jmf$bca[5]), cbind(ci.jlf$t0, ci.jlf$bca[4], 
+           ci.jlf$bca[5]), cbind(ci.jxf$t0, ci.jxf$bca[4], ci.jxf$bca[5]))
+colnames(jci.for) <- c("mean", "lower.ci", "upper.ci")
+rownames(jci.for) <- c("small", "medium", "large", "extra-large")
+
+ssf <- boot(data = 1 - woo.bio[woo.bio[, 6] <= 115, 5], statistic = mean.fun, R = 2000)
+smf <- boot(data = 1 - woo.bio[(woo.bio[, 6] <= 445) & (woo.bio[, 6] > 115), 5], 
+            statistic = mean.fun, R = 2000)
+slf <- boot(data = 1 - woo.bio[(woo.bio[, 6] <= 1810) & (woo.bio[, 6] > 445), 5],
+            statistic = mean.fun, R = 2000)
+sxf <- boot(data = 1 - woo.bio[woo.bio[, 6] > 1811, 5], statistic = mean.fun, R = 2000)
+
+ci.ssf <- boot.ci(ssf, type = "bca")
+ci.smf <- boot.ci(smf, type = "bca")
+ci.slf <- boot.ci(slf, type = "bca")
+ci.sxf <- boot.ci(sxf, type = "bca")
+
+sci.for <- rbind(cbind(ci.ssf$t0, ci.ssf$bca[4], ci.ssf$bca[5]), cbind(ci.smf$t0, 
+           ci.smf$bca[4], ci.smf$bca[5]), cbind(ci.slf$t0, ci.slf$bca[4], 
+          ci.slf$bca[5]), cbind(ci.sxf$t0, ci.sxf$bca[4], ci.sxf$bca[5]))
+colnames(sci.for) <- c("mean", "lower.ci", "upper.ci")
+rownames(sci.for) <- c("small", "medium", "large", "extra-large")
+
+par(mfrow=c(1, 2))
+plot.boot(woo.bio, jci.for)
+plot.boot(woo.bio, sci.for, 1)
+
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(jci.for, digits = 4, caption = "Jaccard"), type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(sci.for, digits = 4, caption = "Sorensen"), type = "latex", comment = FALSE)
+```
+
+2. Shrub
+
+```{r shrubscale_boot, fig.width = 12, fig.height = 6, echo = FALSE}
+jsm <- boot(data = 1 - mix.bio[mix.bio[, 6] <= 115, 4], statistic = mean.fun, R = 2000)
+jmm <- boot(data = 1 - mix.bio[(mix.bio[, 6] <= 445) & (mix.bio[, 6] > 115), 4], statistic = mean.fun, R = 2000)
+jlm <- boot(data = 1 - mix.bio[(mix.bio[, 6] <= 1810) & (mix.bio[, 6] > 445), 4], statistic = mean.fun, R = 2000)
+jxm <- boot(data = 1 - mix.bio[mix.bio[, 6] > 1811, 4], statistic = mean.fun, R = 2000)
+
+ci.jsm <- boot.ci(jsm, type = "bca")
+ci.jmm <- boot.ci(jmm, type = "bca")
+ci.jlm <- boot.ci(jlm, type = "bca")
+ci.jxm <- boot.ci(jxm, type = "bca")
+
+jci.mix <- rbind(cbind(ci.jsm$t0, ci.jsm$bca[4], ci.jsm$bca[5]), cbind(ci.jmm$t0, ci.jmm$bca[4], ci.jmm$bca[5]), 
+                cbind(ci.jlm$t0, ci.jlm$bca[4], ci.jlm$bca[5]), cbind(ci.jxm$t0, ci.jxm$bca[4], ci.jxm$bca[5]))
+colnames(jci.mix) <- c("mean", "lower.ci", "upper.ci")
+rownames(jci.mix) <- c("small", "medium", "large", "extra-large")
+
+ssm <- boot(data = 1 - mix.bio[mix.bio[, 6] <= 115, 5], statistic = mean.fun, R = 2000)
+smm <- boot(data = 1 - mix.bio[(mix.bio[, 6] <= 445) & (mix.bio[, 6] > 115), 5], statistic = mean.fun, R = 2000)
+slm <- boot(data = 1 - mix.bio[(mix.bio[, 6] <= 1810) & (mix.bio[, 6] > 445), 5], statistic = mean.fun, R = 2000)
+sxm <- boot(data = 1 - mix.bio[mix.bio[, 6] > 1811, 5], statistic = mean.fun, R = 2000)
+
+ci.ssm <- boot.ci(ssm, type = "bca")
+ci.smm <- boot.ci(smm, type = "bca")
+ci.slm <- boot.ci(slm, type = "bca")
+ci.sxm <- boot.ci(sxm, type = "bca")
+
+sci.mix <- rbind(cbind(ci.ssm$t0, ci.ssm$bca[4], ci.ssm$bca[5]), cbind(ci.smm$t0, ci.smm$bca[4], ci.smm$bca[5]), 
+                cbind(ci.slm$t0, ci.slm$bca[4], ci.slm$bca[5]), cbind(ci.sxm$t0, ci.sxm$bca[4], ci.sxm$bca[5]))
+colnames(sci.mix) <- c("mean", "lower.ci", "upper.ci")
+rownames(sci.mix) <- c("small", "medium", "large", "extra-large")
+
+par(mfrow=c(1, 2))
+plot.boot(mix.bio, jci.mix)
+plot.boot(mix.bio, sci.mix, 1)
+
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(jci.mix, digits = 4, caption = "Jaccard"), type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(sci.mix, digits = 4, caption = "Sorensen"), type = "latex", comment = FALSE)
+```
+
+3. Meadow
+
+```{r meadowscale_boot, fig.width = 12, fig.height = 6, echo = FALSE}
+jsa <- boot(data = 1 - mea.bio[mea.bio[, 6] <= 115, 4], statistic = mean.fun, R = 2000)
+jma <- boot(data = 1 - mea.bio[(mea.bio[, 6] <= 445) & (mea.bio[, 6] > 115), 4], statistic = mean.fun, R = 2000)
+jla <- boot(data = 1 - mea.bio[(mea.bio[, 6] <= 1810) & (mea.bio[, 6] > 445), 4], statistic = mean.fun, R = 2000)
+jxa <- boot(data = 1 - mea.bio[mea.bio[, 6] > 1811, 4], statistic = mean.fun, R = 2000)
+
+ci.jsa <- boot.ci(jsa, type = "bca")
+ci.jma <- boot.ci(jma, type = "bca")
+ci.jla <- boot.ci(jla, type = "bca")
+ci.jxa <- boot.ci(jxa, type = "bca")
+
+jci.mea <- rbind(cbind(ci.jsa$t0, ci.jsa$bca[4], ci.jsa$bca[5]), cbind(ci.jma$t0, ci.jma$bca[4], ci.jma$bca[5]), 
+                cbind(ci.jla$t0, ci.jla$bca[4], ci.jla$bca[5]), cbind(ci.jxa$t0, ci.jxa$bca[4], ci.jxa$bca[5]))
+colnames(jci.mea) <- c("mean", "lower.ci", "upper.ci")
+rownames(jci.mea) <- c("small", "medium", "large", "extra-large")
+
+ssa <- boot(data = 1 - mea.bio[mea.bio[, 6] <= 115, 5], statistic = mean.fun, R = 2000)
+sma <- boot(data = 1 - mea.bio[(mea.bio[, 6] <= 445) & (mea.bio[, 6] > 115), 5], statistic = mean.fun, R = 2000)
+sla <- boot(data = 1 - mea.bio[(mea.bio[, 6] <= 1810) & (mea.bio[, 6] > 445), 5], statistic = mean.fun, R = 2000)
+sxa <- boot(data = 1 - mea.bio[mea.bio[, 6] > 1811, 5], statistic = mean.fun, R = 2000)
+
+ci.ssa <- boot.ci(ssa, type = "bca")
+ci.sma <- boot.ci(sma, type = "bca")
+ci.sla <- boot.ci(sla, type = "bca")
+ci.sxa <- boot.ci(sxa, type = "bca")
+
+sci.mea <- rbind(cbind(ci.ssa$t0, ci.ssa$bca[4], ci.ssa$bca[5]), cbind(ci.sma$t0, ci.sma$bca[4], ci.sma$bca[5]), 
+                cbind(ci.sla$t0, ci.sla$bca[4], ci.sla$bca[5]), cbind(ci.sxa$t0, ci.sxa$bca[4], ci.sxa$bca[5]))
+colnames(sci.mea) <- c("mean", "lower.ci", "upper.ci")
+rownames(sci.mea) <- c("small", "medium", "large", "extra-large")
+
+par(mfrow=c(1, 2))
+plot.boot(mea.bio, jci.mea)
+plot.boot(mea.bio, sci.mea, 1)
+
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(jci.mea, digits = 4, caption = "Jaccard"), type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(sci.mea, digits = 4, caption = "Sorensen"), type = "latex", comment = FALSE)
+```
+
+* Mean Dissimilarity for each scale (with tall and short shrubs separately)
+
+4. Tall Shrub
+
+```{r tallscale_boot, fig.width = 12, fig.height = 6, echo = FALSE}
+jst <- boot(data = 1 - tal.bio[tal.bio[, 6] <= 115, 4], statistic = mean.fun, R = 2000)
+jmt <- boot(data = 1 - tal.bio[(tal.bio[, 6] <= 445) & (tal.bio[, 6] > 115), 4], statistic = mean.fun, R = 2000)
+jlt <- boot(data = 1 - tal.bio[(tal.bio[, 6] <= 1810) & (tal.bio[, 6] > 445), 4], statistic = mean.fun, R = 2000)
+jxt <- boot(data = 1 - tal.bio[tal.bio[, 6] > 1811, 4], statistic = mean.fun, R = 2000)
+
+ci.jst <- boot.ci(jst, type = "bca")
+ci.jmt <- boot.ci(jmt, type = "bca")
+ci.jlt <- boot.ci(jlt, type = "bca")
+ci.jxt <- boot.ci(jxt, type = "bca")
+
+jci.tal <- rbind(cbind(ci.jst$t0, ci.jst$bca[4], ci.jst$bca[5]), cbind(ci.jmt$t0, ci.jmt$bca[4], ci.jmt$bca[5]), 
+                cbind(ci.jlt$t0, ci.jlt$bca[4], ci.jlt$bca[5]), cbind(ci.jxt$t0, ci.jxt$bca[4], ci.jxt$bca[5]))
+colnames(jci.tal) <- c("mean", "lower.ci", "upper.ci")
+rownames(jci.tal) <- c("small", "medium", "large", "extra-large")
+
+sst <- boot(data = 1 - tal.bio[tal.bio[, 6] <= 115, 5], statistic = mean.fun, R = 2000)
+smt <- boot(data = 1 - tal.bio[(tal.bio[, 6] <= 445) & (tal.bio[, 6] > 115), 5], statistic = mean.fun, R = 2000)
+slt <- boot(data = 1 - tal.bio[(tal.bio[, 6] <= 1810) & (tal.bio[, 6] > 445), 5], statistic = mean.fun, R = 2000)
+sxt <- boot(data = 1 - tal.bio[tal.bio[, 6] > 1811, 5], statistic = mean.fun, R = 2000)
+
+ci.sst <- boot.ci(sst, type = "bca")
+ci.smt <- boot.ci(smt, type = "bca")
+ci.slt <- boot.ci(slt, type = "bca")
+ci.sxt <- boot.ci(sxt, type = "bca")
+
+sci.tal <- rbind(cbind(ci.sst$t0, ci.sst$bca[4], ci.sst$bca[5]), cbind(ci.smt$t0, ci.smt$bca[4], ci.smt$bca[5]), 
+                cbind(ci.slt$t0, ci.slt$bca[4], ci.slt$bca[5]), cbind(ci.sxt$t0, ci.sxt$bca[4], ci.sxt$bca[5]))
+colnames(sci.tal) <- c("mean", "lower.ci", "upper.ci")
+rownames(sci.tal) <- c("small", "medium", "large", "extra-large")
+
+par(mfrow=c(1, 2))
+plot.boot(tal.bio, jci.tal)
+plot.boot(tal.bio, sci.tal, 1)
+
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(jci.tal, digits = 4, caption = "Jaccard"), type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(sci.tal, digits = 4, caption = "Sorensen"), type = "latex", comment = FALSE)
+```
+
+
+5. Short Shrub
+
+```{r shortscale_boot, fig.width = 12, fig.height = 6, echo = FALSE}
+jss <- boot(data = 1 - sho.bio[sho.bio[, 6] <= 115, 4], statistic = mean.fun, R = 2000)
+jms <- boot(data = 1 - sho.bio[(sho.bio[, 6] <= 445) & (sho.bio[, 6] > 115), 4], statistic = mean.fun, R = 2000)
+jls <- boot(data = 1 - sho.bio[(sho.bio[, 6] <= 1810) & (sho.bio[, 6] > 445), 4], statistic = mean.fun, R = 2000)
+jxs <- boot(data = 1 - sho.bio[sho.bio[, 6] > 1811, 4], statistic = mean.fun, R = 2000)
+
+ci.jss <- boot.ci(jss, type = "bca")
+ci.jms <- boot.ci(jms, type = "bca")
+ci.jls <- boot.ci(jls, type = "bca")
+ci.jxs <- boot.ci(jxs, type = "bca")
+
+jci.sho <- rbind(cbind(ci.jss$t0, ci.jss$bca[4], ci.jss$bca[5]), cbind(ci.jms$t0, ci.jms$bca[4], ci.jms$bca[5]), 
+                cbind(ci.jls$t0, ci.jls$bca[4], ci.jls$bca[5]), cbind(ci.jxs$t0, ci.jxs$bca[4], ci.jxs$bca[5]))
+colnames(jci.sho) <- c("mean", "lower.ci", "upper.ci")
+rownames(jci.sho) <- c("small", "medium", "large", "extra-large")
+
+sss <- boot(data = 1 - sho.bio[sho.bio[, 6] <= 115, 5], statistic = mean.fun, R = 2000)
+sms <- boot(data = 1 - sho.bio[(sho.bio[, 6] <= 445) & (sho.bio[, 6] > 115), 5], statistic = mean.fun, R = 2000)
+sls <- boot(data = 1 - sho.bio[(sho.bio[, 6] <= 1810) & (sho.bio[, 6] > 445), 5], statistic = mean.fun, R = 2000)
+sxs <- boot(data = 1 - sho.bio[sho.bio[, 6] > 1811, 5], statistic = mean.fun, R = 2000)
+
+ci.sss <- boot.ci(sss, type = "bca")
+ci.sms <- boot.ci(sms, type = "bca")
+ci.sls <- boot.ci(sls, type = "bca")
+ci.sxs <- boot.ci(sxs, type = "bca")
+
+sci.sho <- rbind(cbind(ci.sss$t0, ci.sss$bca[4], ci.sss$bca[5]), cbind(ci.sms$t0, ci.sms$bca[4], ci.sms$bca[5]), 
+                cbind(ci.sls$t0, ci.sls$bca[4], ci.sls$bca[5]), cbind(ci.sxs$t0, ci.sxs$bca[4], ci.sxs$bca[5]))
+colnames(sci.sho) <- c("mean", "lower.ci", "upper.ci")
+rownames(sci.sho) <- c("small", "medium", "large", "extra-large")
+
+par(mfrow=c(1, 2))
+plot.boot(sho.bio, jci.sho)
+plot.boot(sho.bio, sci.sho, 1)
+
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(jci.sho, digits = 4, caption = "Jaccard"), type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(sci.sho, digits = 4, caption = "Sorensen"), type = "latex", comment = FALSE)
+```
+
+
+## Bootstrapping 2
+
+### Within Landscape
+
+```{r}
+# bootstrapping with 2000 replications
+wl.jforres <- boot(data = as.data.frame(for.woo), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+wl.sforres <- boot(data = as.data.frame(for.woo), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+wl.jmixres <- boot(data = as.data.frame(mix.shr), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+wl.smixres <- boot(data = as.data.frame(mix.shr), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+wl.jtalres <- boot(data = as.data.frame(tal.shr), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+wl.stalres <- boot(data = as.data.frame(tal.shr), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+wl.jshrres <- boot(data = as.data.frame(shr.shr), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+wl.sshrres <- boot(data = as.data.frame(shr.shr), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+wl.jmeares <- boot(data = as.data.frame(agr.mea), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+wl.smeares <- boot(data = as.data.frame(agr.mea), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+```
+
+### Between Landscapes
+
+```{r}
+# bootstrapping with 2000 replications
+bl.jwoores <- boot(data = as.data.frame(woo), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+bl.swoores <- boot(data = as.data.frame(woo), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+bl.jmixres <- boot(data = as.data.frame(mix), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+bl.smixres <- boot(data = as.data.frame(mix), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+bl.jtalres <- boot(data = as.data.frame(tal), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+bl.stalres <- boot(data = as.data.frame(tal), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+bl.jshrres <- boot(data = as.data.frame(shr), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+bl.sshrres <- boot(data = as.data.frame(shr), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+bl.jmeares <- boot(data = as.data.frame(mea), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+bl.smeares <- boot(data = as.data.frame(mea), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+```
+
+### All Biotopes
+
+```{r}
+# bootstrapping with 2000 replications
+al.jforres <- boot(data = as.data.frame(woo.bio), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+al.sforres <- boot(data = as.data.frame(woo.bio), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+al.jmixres <- boot(data = as.data.frame(mix.bio), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+al.smixres <- boot(data = as.data.frame(mix.bio), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+al.jtalres <- boot(data = as.data.frame(tal.bio), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+al.stalres <- boot(data = as.data.frame(tal.bio), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+al.jshrres <- boot(data = as.data.frame(sho.bio), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+al.sshrres <- boot(data = as.data.frame(sho.bio), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+
+al.jmeares <- boot(data = as.data.frame(mea.bio), statistic = bs.jac, R = 2000, 
+                   formula = (1 - Jabd) ~ ipcc)
+al.smeares <- boot(data = as.data.frame(mea.bio), statistic = bs.sor, R = 2000, 
+                   formula = (1 - Labd) ~ ipcc)
+```
+
+**Confidence Interval**
+
+### Within Landscape - get 95% confidence intervals
+
+```{r, echo = FALSE}
+ci.boot <- function(base){
+  temp1 <- boot.ci(base, type="bca", index=1) # intercept 
+  temp2 <- boot.ci(base, type="bca", index=2) # slope
+  temp3 <- boot.ci(base, type="bca", index=3) # r.square
+  temp4 <- boot.ci(base, type="bca", index=4) # mean
+  base.ci <- rbind(cbind(temp1$t0, temp1$bca[4], temp1$bca[5]), cbind(temp2$t0, temp2$bca[4], 
+  temp2$bca[5]), cbind(temp3$t0, temp3$bca[4], temp3$bca[5]), cbind(temp4$t0, temp4$bca[4], temp4$bca[5]))
+  base.ci
+}
+```
+
+*Jaccard Estimator*
+
+```{r}
+wl.jforres.ci <- ci.boot(wl.jforres)
+wl.jmixres.ci <- ci.boot(wl.jmixres)
+wl.jtalres.ci <- ci.boot(wl.jtalres)
+wl.jshrres.ci <- ci.boot(wl.jshrres)
+wl.jmeares.ci <- ci.boot(wl.jmeares)
+```
+
+*Sorensen Estimator*
+
+```{r}
+wl.sforres.ci <- ci.boot(wl.sforres)
+wl.smixres.ci <- ci.boot(wl.smixres)
+wl.stalres.ci <- ci.boot(wl.stalres)
+wl.sshrres.ci <- ci.boot(wl.sshrres)
+wl.smeares.ci <- ci.boot(wl.smeares)
+```
+
+### Between Landscapes - get 95% confidence intervals
+
+*Jaccard Estimator*
+
+```{r}
+bl.jforres.ci <- ci.boot(bl.jwoores)
+bl.jmixres.ci <- ci.boot(bl.jmixres)
+bl.jtalres.ci <- ci.boot(bl.jtalres)
+bl.jshrres.ci <- ci.boot(bl.jshrres)
+bl.jmeares.ci <- ci.boot(bl.jmeares)
+```
+
+*Sorensen Estimator*
+
+```{r}
+bl.sforres.ci <- ci.boot(bl.swoores)
+bl.smixres.ci <- ci.boot(bl.smixres)
+bl.stalres.ci <- ci.boot(bl.stalres)
+bl.sshrres.ci <- ci.boot(bl.sshrres)
+bl.smeares.ci <- ci.boot(bl.smeares)
+```
+
+### All Biotopes - get 95% confidence intervals
+
+*Jaccard Estimator*
+
+```{r}
+al.jforres.ci <- ci.boot(al.jforres)
+al.jmixres.ci <- ci.boot(al.jmixres)
+al.jtalres.ci <- ci.boot(al.jtalres)
+al.jshrres.ci <- ci.boot(al.jshrres)
+al.jmeares.ci <- ci.boot(al.jmeares)
+```
+
+*Sorensen Estimator*
+
+```{r}
+al.sforres.ci <- ci.boot(al.sforres)
+al.smixres.ci <- ci.boot(al.smixres)
+al.stalres.ci <- ci.boot(al.stalres)
+al.sshrres.ci <- ci.boot(al.sshrres)
+al.smeares.ci <- ci.boot(al.smeares)
+```
+
+## Results 1
+
+```{r, echo = FALSE}
+interc.plot4 <- function(base1, base2, base3, base4){
+  mean.ci <- c(base1[1, 1], base2[1, 1], base3[1, 1], base4[1, 1])
+  l.ci <- c(base1[1, 2], base2[1, 2], base3[1, 2], base4[1, 2])
+  s.ci <- c(base1[1, 3], base2[1, 3], base3[1, 3], base4[1, 3])
+  plot(1:4, mean.ci, xaxt = "n", ylim =c(0, 1), ylab = "Intercept", xlab = "", pch = "-", lwd = 2)
+  axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+  segments(x0 = 1:4, y0 = l.ci, y1 = s.ci)
+  points(1:4, l.ci, lwd = 1.5, pch = "-")
+  points(1:4, s.ci, lwd = 1.5, pch = "-")
+}
+
+dissim.plot4 <- function(base1, base2, base3, base4){
+  mean.ci <- c(base1[4, 1], base2[4, 1], base3[4, 1], base4[4, 1])
+  l.ci <- c(base1[4, 2], base2[4, 2], base3[4, 2], base4[4, 2])
+  s.ci <- c(base1[4, 3], base2[4, 3], base3[4, 3], base4[4, 3])
+  plot(1:4, 1 - mean.ci, xaxt = "n", ylim =c(0, 1), ylab = expression(~beta*"-diversity"), xlab = "", pch = "-", lwd = 2)
+  axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+  segments(x0 = 1:4, y0 = 1 - l.ci, y1 = 1 - s.ci)
+  points(1:4, 1 - l.ci, lwd = 1.5, pch = "-")
+  points(1:4, 1 - s.ci, lwd = 1.5, pch = "-")
+}
+
+slope.plot4 <- function(base1, base2, base3, base4){
+  mean.ci <- c(base1[2, 1], base2[2, 1], base3[2, 1], base4[2, 1])
+  l.ci <- c(base1[2, 2], base2[2, 2], base3[2, 2], base4[2, 2])
+  s.ci <- c(base1[2, 3], base2[2, 3], base3[2, 3], base4[2, 3])
+  plot(1:4, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "Slope", xlab = "", pch = "-", lwd = 2)
+  axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+  segments(x0 = 1:4, y0 = l.ci, y1 = s.ci)
+  points(1:4, l.ci, lwd = 1.5, pch = "-")
+  points(1:4, s.ci, lwd = 1.5, pch = "-")
+}
+
+rsquar.plot4 <- function(base1, base2, base3, base4){
+  mean.ci <- c(base1[3, 1], base2[3, 1], base3[3, 1], base4[3, 1])
+  l.ci <- c(base1[3, 2], base2[3, 2], base3[3, 2], base4[3, 2])
+  s.ci <- c(base1[3, 3], base2[3, 3], base3[3, 3], base4[3, 3])
+  plot(1:4, mean.ci, xaxt = "n", ylim = c(min(l.ci), max(s.ci)), ylab = "R-Square", xlab = "", pch = "-", lwd = 2)
+  axis(1, at = 1:4, labels = c("Forest", "Tall", "Short", "Meadow"))
+  segments(x0 = 1:4, y0 = l.ci, y1 = s.ci)
+  points(1:4, l.ci, lwd = 1.5, pch = "-")
+  points(1:4, s.ci, lwd = 1.5, pch = "-")
+}
+```
+
+**Jaccard**
+
+* Intercept
+
+```{r interc3_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+interc.plot3(wl.jforres.ci, wl.jmixres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+interc.plot3(bl.jforres.ci, bl.jmixres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+interc.plot3(al.jforres.ci, al.jmixres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* Dissimilarity
+
+```{r dissim3_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+dissim.plot3(wl.jforres.ci, wl.jmixres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+dissim.plot3(bl.jforres.ci, bl.jmixres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+dissim.plot3(al.jforres.ci, al.jmixres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* Slope
+
+```{r slope3_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+slope.plot3(wl.jforres.ci, wl.jmixres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+slope.plot3(bl.jforres.ci, bl.jmixres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+slope.plot3(al.jforres.ci, al.jmixres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* R-Square
+
+```{r r-quar3_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+rsquar.plot3(wl.jforres.ci, wl.jmixres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+rsquar.plot3(bl.jforres.ci, bl.jmixres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+rsquar.plot3(al.jforres.ci, al.jmixres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+**Sorensen**
+
+* Intercept
+
+```{r interc3_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+interc.plot3(wl.sforres.ci, wl.smixres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+interc.plot3(bl.sforres.ci, bl.smixres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+interc.plot3(al.sforres.ci, al.smixres.ci, al.smeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* Dissimilarity
+
+```{r dissim3_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+dissim.plot3(wl.sforres.ci, wl.smixres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+dissim.plot3(bl.sforres.ci, bl.smixres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+dissim.plot3(al.sforres.ci, al.smixres.ci, al.smeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* Slope
+
+```{r slope3_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+slope.plot3(wl.sforres.ci, wl.smixres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+slope.plot3(bl.sforres.ci, bl.smixres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+slope.plot3(al.sforres.ci, al.smixres.ci, al.smeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* R-Square
+
+```{r r-squar3_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+rsquar.plot3(wl.sforres.ci, wl.smixres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+rsquar.plot3(bl.sforres.ci, bl.smixres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+rsquar.plot3(al.sforres.ci, al.smixres.ci, al.smeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+# Results 2
+
+**Jaccard**
+
+* Intercept
+
+```{r interc4_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+interc.plot4(wl.jforres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+interc.plot4(bl.jforres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+interc.plot4(al.jforres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* Dissimilarity
+
+```{r dissim4_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+dissim.plot4(wl.jforres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+dissim.plot4(bl.jforres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+dissim.plot4(al.jforres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* Slope
+
+```{r slope4_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+slope.plot4(wl.jforres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+slope.plot4(bl.jforres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+slope.plot4(al.jforres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* R-Square
+
+```{r r-squar4_jac, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+rsquar.plot4(wl.jforres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci)
+title("Within Landscape", cex = 1.5)
+rsquar.plot4(bl.jforres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci)
+title("Between Landscapes", cex = 1.5)
+rsquar.plot4(al.jforres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+**Sorensen**
+
+* Intercept
+
+```{r interc4_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+interc.plot4(wl.sforres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+interc.plot4(bl.sforres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+interc.plot4(al.sforres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* Dissimilarity
+
+```{r dissim4_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+dissim.plot4(wl.sforres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+dissim.plot4(bl.sforres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+dissim.plot4(al.sforres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci)
+```
+
+* Slope
+
+```{r slope4_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+slope.plot4(wl.sforres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+slope.plot4(bl.sforres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+slope.plot4(al.sforres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+* R-Square
+
+```{r r-squar4_sor, fig.width = 12, fig.height = 4}
+par(mfrow = c(1, 3))
+rsquar.plot4(wl.sforres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci)
+title("Within Landscape", cex = 1.5)
+rsquar.plot4(bl.sforres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci)
+title("Between Landscapes", cex = 1.5)
+rsquar.plot4(al.sforres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci)
+title("All Biotopes", cex = 1.5)
+```
+
+
+# Tables
+
+```{r, echo = FALSE}
+boot.table <- function(base1, base2, base3, base4, base5, index = 1){
+  #1: intercept; 2: slope; 3: r-square and 4: dissimilarity (default is intercept)
+  mean.ci <- c(base1[index, 1], base2[index, 1], base3[index, 1], base4[index, 1], base5[index, 1])
+  lower.ci <- c(base1[index, 2], base2[index, 2], base3[index, 2], base4[index, 2], base5[index, 2])
+  upper.ci <- c(base1[index, 3], base2[index, 3], base3[index, 3], base4[index, 3], base5[index, 3])
+  xt <- cbind(mean.ci, lower.ci, upper.ci)
+  if(index == 4) xt <- 1 - xt
+  rownames(xt) <- c("Forest", "Shrub", "Tall", "Short", "Meadow")
+  xt
+}
+```
+
+## Jaccard 
+
+1. Within landscape
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.jforres.ci, wl.jmixres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci), 
+             digits = 4, caption = "Intercept"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.jforres.ci, wl.jmixres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci, 4), 
+             digits = 4, caption = "Dissimilarity"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.jforres.ci, wl.jmixres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci, 2), 
+             digits = 6, caption = "Slope"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.jforres.ci, wl.jmixres.ci, wl.jtalres.ci, wl.jshrres.ci, wl.jmeares.ci, 3), 
+             digits = 4, caption = "R-square"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+2. Between landscapes
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.jforres.ci, bl.jmixres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci), 
+             digits = 4, caption = "Intercept"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.jforres.ci, bl.jmixres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci, 4), 
+             digits = 4, caption = "Dissimilarity"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.jforres.ci, bl.jmixres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci, 2), 
+             digits = 6, caption = "Slope"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.jforres.ci, bl.jmixres.ci, bl.jtalres.ci, bl.jshrres.ci, bl.jmeares.ci, 3), 
+             digits = 4, caption = "R-square"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+3. All biotopes
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.jforres.ci, al.jmixres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci), 
+             digits = 4, caption = "Intercept"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.jforres.ci, al.jmixres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci, 4), 
+             digits = 4, caption = "Dissimilarity"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.jforres.ci, al.jmixres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci, 2), 
+             digits = 6, caption = "Slope"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.jforres.ci, al.jmixres.ci, al.jtalres.ci, al.jshrres.ci, al.jmeares.ci, 3), 
+             digits = 4, caption = "R-square"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+## Sorensen
+
+1. Within landscape
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.sforres.ci, wl.smixres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci), 
+             digits = 4, caption = "Intercept"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.sforres.ci, wl.smixres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci, 4), 
+             digits = 4, caption = "Dissimilarity"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.sforres.ci, wl.smixres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci, 2), 
+             digits = 6, caption = "Slope"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(wl.sforres.ci, wl.smixres.ci, wl.stalres.ci, wl.sshrres.ci, wl.smeares.ci, 3), 
+             digits = 4, caption = "R-square"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+2. Between landscapes
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.sforres.ci, bl.smixres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci), 
+             digits = 4, caption = "Intercept"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.sforres.ci, bl.smixres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci, 4), 
+             digits = 4, caption = "Dissimilarity"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.sforres.ci, bl.smixres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci, 2), 
+             digits = 6, caption = "Slope"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(bl.sforres.ci, bl.smixres.ci, bl.stalres.ci, bl.sshrres.ci, bl.smeares.ci, 3), 
+             digits = 4, caption = "R-square"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+3. All biotopes
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.sforres.ci, al.smixres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci), 
+             digits = 4, caption = "Intercept"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.sforres.ci, al.smixres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci, 4), 
+             digits = 4, caption = "Dissimilarity"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.sforres.ci, al.smixres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci, 2), 
+             digits = 6, caption = "Slope"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
+```{r, echo = FALSE, results = 'asis'}
+print(xtable(boot.table(al.sforres.ci, al.smixres.ci, al.stalres.ci, al.sshrres.ci, al.smeares.ci, 3), 
+             digits = 4, caption = "R-square"), floating = FALSE, type = "latex", comment = FALSE)
+```
+
