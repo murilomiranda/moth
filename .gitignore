@@ -1,4 +1,10 @@
 .Rproj.user
 .Rhistory
 .RData
+.Rhistory
 report.docx
+report_files
+figure
+report_cache
+
+.Rhistory
